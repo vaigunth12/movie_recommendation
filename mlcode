@@ -1,0 +1,196 @@
+from google.colab import drive
+drive.mount('/content/drive')
+
+import pandas as pd
+import numpy as np
+import csv
+
+movies=pd.read_csv("drive/MyDrive/movie.csv")
+
+movies.head()
+
+movies["keywords"][0]
+
+movies["tagline"][0]
+
+movies["overview"][0]
+
+df2=pd.read_csv("drive/MyDrive/movie_credit.csv")
+
+df2.head()
+
+df2["cast"]    
+
+movies=movies.merge(df2,on="title")
+
+movies.info()   
+
+import ast
+def str_list(x):
+  x=ast.literal_eval(x)
+  l=[]
+  for item in x:
+
+    l.append(item['name'])
+  
+  return l
+
+movies["cast"]=movies["cast"].apply(str_list)
+
+import ast
+def str2_list(x):
+  x=ast.literal_eval(x)
+  l=[]
+  for item in x:
+    if item['job']=="Director":
+      l.append(item['name'])
+  
+  return l
+
+movies["crew"]=movies["crew"].apply(str2_list)
+
+movies["cast"]
+
+movies["crew"]
+
+movies["genres"]=movies['genres'].apply(str_list)
+movies["keywords"]=movies['keywords'].apply(str_list)
+
+movies.isna().sum()
+
+movies.sample(5)
+
+# removing space 
+def _join(x):
+  l=[]
+  for i in x:
+    l.append(i.replace(" ",""))
+  return l
+
+movies["cast"]=movies["cast"].apply(_join)
+
+movies["cast"]=movies["cast"].apply(lambda i:i[0:3])
+
+movies["cast"]    
+
+new_df=pd.DataFrame(movies,columns=['id','homepage','title','cast','crew','overview','genres','keywords'])
+
+new_df.head(5)
+
+new_df['crew']=new_df['crew'].apply(_join)
+
+new_df.head()
+
+new_df.isna().sum()
+
+new_df["homepage"]=new_df["homepage"].fillna(0)
+
+url=list(enumerate(new_df["homepage"]))
+new_df["urls"]=0
+for i in range(len(url)):
+  if new_df["homepage"][i]==0:
+    
+    x=("{}/{}".format("https://www.",str("".join(list(new_df["title"][url[i][0]].split())))))
+
+    new_df["urls"][i]=x
+  else:
+    new_df["urls"][i]=new_df["homepage"][i]
+
+# def link(url,i):
+#   s=url
+#   x="{} + {}".format("https://www.",str(new_df.iloc[[url[i][0]]].title))
+#   iF s is "link" 
+#     return x
+#   else:
+#     return s
+# # new_df[new_df["homepage"].fillna("{} + {}".format("https://www.",new_df["title"]]))
+new_df["urls"]
+     
+
+
+
+# new_df.iloc[[0]].title
+new_df.sample(5)
+
+# to convert string into list of strings 
+def spliting(text):
+  text=str(text).split()
+  return text
+
+new_df['overview']=new_df['overview'].apply(spliting)
+
+new_df['all_tags']=new_df['overview'] + new_df['genres'] + new_df['keywords'] +  new_df['cast'] + new_df['crew']     
+
+new_df.drop(columns=['overview','genres' ,'keywords','cast' , 'crew','homepage'],inplace=True)
+
+new_df.head()
+
+def convert_lower(text):
+    l=[]
+    for item in text:
+      l.append(item.lower())
+    return l
+
+
+
+new_df['all_tags']=new_df['all_tags'].apply(convert_lower)
+
+new_df.head()
+
+new_df.head()
+
+pip install nltk
+
+import nltk
+from nltk.stem.porter import PorterStemmer
+ps=PorterStemmer()
+def steming(text):
+  l=[]
+  for i in text:
+
+    l.append(ps.stem(i))
+  return l
+
+new_df['all_tags']=new_df['all_tags'].apply(steming)
+
+new_df.sample(5)
+
+new_df["all_tags"]=new_df["all_tags"].apply(_join)   
+
+new_df['all_tags'] = new_df['all_tags'].apply(lambda x: " ".join(x))
+
+from sklearn.feature_extraction.text import CountVectorizer
+cv = CountVectorizer(stop_words='english')
+
+data = cv.fit_transform(new_df['all_tags']).toarray()
+data
+
+from sklearn.metrics.pairwise import cosine_similarity
+similarity = cosine_similarity(data)
+similarity
+
+
+
+def movie_recommend(movie):
+    index = new_df[new_df['title'] == movie].index[0]
+    distances = sorted(list(enumerate(similarity[index])),reverse=True,key = lambda x: x[1])
+    for i in distances[1:8]:
+
+      
+      print("{} {}".format(new_df.iloc[i[0]].title,new_df.iloc[i[0]].urls))
+
+movie_recommend("Avatar")
+
+movie_recommend("Batman")
+
+movie_recommend("2016: Obama's America")
+
+import pickle
+
+pickle.dump(new_df,open("movie_recm.pkl","wb"))
+pickle.dump(similarity,open("similarity.pkl","wb"))
+
+
+
+np.array(new_df["title"])
+
